@@ -1,0 +1,11 @@
+# Core Machine Learning Framework
+torch==2.11.0
+torchvision==0.26.0
+
+# Model Loading and Optimization
+transformers==5.5.0
+accelerate==1.13.0
+bitsandbytes==0.49.2
+
+# Image Handling (Required for Gemma 4's Vision capabilities)
+pillow>=11.0.0
