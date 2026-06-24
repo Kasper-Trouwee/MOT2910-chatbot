@@ -25,5 +25,5 @@ To start the complete stack, run:
 honcho start
 ```
 
-[!WARNING]
-If the the voice is squicky change the sample rate from piper_tts (.venv/lib64/python3.14/site-packages/livekit/plugins/piper_tts/tts.py)
+> [!WARNING]
+> If the the voice is squicky change the sample rate from piper_tts (.venv/lib64/python3.14/site-packages/livekit/plugins/piper_tts/tts.py)
