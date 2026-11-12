@@ -81,3 +81,17 @@ class Etherpad:
         except Exception as e:
             logger.error(f"Error creating Etherpad: {e}")
 
+    async def save_pad_to_file(self, filename: str, type: str = "txt"):
+        """Save the current pad text to a local file.
+
+        Args:
+            filename: Path to the file where the pad text will be saved.
+        """
+        try:
+            await asyncio.to_thread(self.client.createPad, self.pad_id)
+            logger.info(f"Etherpad '{self.pad_id}' is ready.")
+            webbrowser.open(f"http://localhost:9001/p/{self.pad_id}/export/{type}")
+        except Exception as e:
+            logger.error(f"Error creating Etherpad: {e}")
+
+
