@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class EtherpadCanvasManager:
+class Etherpad:
     """Read and update a shared plaintext canvas backed by local Etherpad.
 
     The Etherpad API key is read from the ``ETHERPAD_API_KEY`` environment
