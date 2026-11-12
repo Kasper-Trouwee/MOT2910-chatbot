@@ -27,3 +27,13 @@ Return ONLY the word "NO" if:
 - A human is mid-sentence, actively typing, or expanding on a new concept.
 
 DECISION (YES/NO):"""
+
+CLIMATE_CHANGE_MITIGATION_TASK = """
+You are instructed to brainstorm innovative, community-level strategies to significantly reduce carbon footprints in urban environments without relying on massive government funding.
+"""
+CHEMICAL_WASTE_MANAGEMENT_TASK = """ 
+You must design a novel system or campaign to incentivise local manufacturing businesses to safely recycle or dispose of hazardous chemical by-products.
+"""
+CLOTHING_RECYCLING_POLICY_TASK = """
+You are asked to generate creative, engaging initiatives to completely eliminate textile waste on a university campus and promote a circular "fast fashion" economy — an approach to the design, creation, and marketing of clothing fashions that emphasises making fashion trends quickly and cheaply available to consumers. 
+"""
