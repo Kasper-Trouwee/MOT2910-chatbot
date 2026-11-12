@@ -68,52 +68,6 @@ Return ONLY the word "NO" if:
 
 DECISION (YES/NO):"""
 
-
-# ==========================================
-# 2. SHARED CANVAS STATE MANAGER (Etherpad)
-# ==========================================
-
-class EtherpadCanvasManager:
-    """Polls the local Etherpad API to retrieve plaintext canvas state."""
-    def __init__(self, pad_id: str = "valerie-brainstorm"):
-        self.pad_id = pad_id
-        
-        api_key = os.getenv("ETHERPAD_API_KEY")
-        if not api_key:
-            raise ValueError("ETHERPAD_API_KEY environment variable is not set. Please provide your Etherpad API key.")
-            
-        self.client = EtherpadLiteClient(api_key, 'http://localhost:9001/api')
-        self.cached_text = "(Shared canvas currently empty)"
-
-        asyncio.create_task(self.create_pad_if_missing())
-        
-    async def get_latest_text(self) -> str:
-        try:
-            result = await asyncio.to_thread(self.client.getText, self.pad_id)
-            self.cached_text = result.get("text", "").strip()
-        except Exception as e:
-            logger.error(f"Error reading Etherpad: {e}")
-            
-        return self.cached_text
-
-    async def append_text(self, new_content: str):
-        try:
-            current_text = await self.get_latest_text()
-            updated_text = f"{current_text}\n{new_content}".strip()
-            await asyncio.to_thread(self.client.setText, self.pad_id, updated_text)
-            logger.info(f"Appended new content to Etherpad: '{new_content}'")
-        except Exception as e:
-            logger.error(f"Error appending to Etherpad: {e}")
-    
-    async def create_pad_if_missing(self):
-        try:
-            await asyncio.to_thread(self.client.createPad, self.pad_id)
-            logger.info(f"Etherpad '{self.pad_id}' is ready.")
-            webbrowser.open(f"http://localhost:9001/p/{self.pad_id}")
-        except Exception as e:
-            logger.error(f"Error creating Etherpad: {e}")
-
-
 # ==========================================
 # 3. VALERIE VOICE AGENT & MULTI-TRIGGER LOGIC
 # ==========================================
