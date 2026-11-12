@@ -21,12 +21,13 @@ class Etherpad:
         cached_text: Most recently retrieved text, or the empty-canvas
             placeholder before text has been retrieved.
     """
-    def __init__(self, pad_id: str = "valerie-brainstorm"):
+    def __init__(self, pad_id: str = "valerie-brainstorm", prompt: str = ""):
         """Initialize the manager and schedule creation of its pad.
 
         Args:
             pad_id: Etherpad pad identifier. Defaults to
                 ``"valerie-brainstorm"``.
+            prompt: Initial text to set on the pad.
 
         Raises:
             ValueError: If ``ETHERPAD_API_KEY`` is not set.
@@ -39,6 +40,7 @@ class Etherpad:
             
         self.client = EtherpadLiteClient(api_key, 'http://localhost:9001/api')
         self.cached_text = "(Shared canvas currently empty)"
+        self.client.setText(prompt);
 
         asyncio.create_task(self.create_pad_if_missing())
         
