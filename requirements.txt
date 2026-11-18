@@ -4,5 +4,8 @@ livekit-agents
 livekit-plugins-speechmatics
 livekit-plugins-piper-tts
 livekit-plugins-silero
+livekit-plugins-openai
+livekit-plugins-groq
 piper-tts[http]
 honcho
+pyetherpadlite
