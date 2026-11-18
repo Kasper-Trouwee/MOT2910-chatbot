@@ -21,12 +21,15 @@ from piper_tts import PiperTTS
 
 from etherpad import Etherpad
 from valerie import Valerie
+from prompts import CLIMATE_CHANGE_MITIGATION_TASK, CHEMICAL_WASTE_MANAGEMENT_TASK, CLOTHING_RECYCLING_POLICY_TASK
 
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("valerie-experiment-agent")
 
+logging.getLogger("speechmatics.rt.transport").setLevel(logging.WARNING)
+logging.getLogger("speechmatics").setLevel(logging.WARNING)
 
 async def entrypoint(ctx: JobContext):
     logger.info(f"Connecting to room: {ctx.room.name}")
@@ -36,7 +39,7 @@ async def entrypoint(ctx: JobContext):
         api_key=os.getenv("GROQ_API_KEY"),
         base_url="https://api.groq.com/openai/v1"
     )
-    canvas_manager = Etherpad(pad_id=ctx.room.name)
+    canvas_manager = Etherpad(pad_id=ctx.room.name, prompt=CLIMATE_CHANGE_MITIGATION_TASK)
     agent = Valerie(canvas_manager, openai_client)
 
     # 1. Speech-to-Text
@@ -61,10 +64,11 @@ async def entrypoint(ctx: JobContext):
         stt=stt_engine,
         llm=llm_engine,
         tts=tts_engine,
+        allow_interruptions=False,
+        min_endpointing_delay=0.5,
         turn_handling={
             "preemptive_generation": {"enabled": False},
             "endpointing": {"min_delay": 0.5},
-            "allow_interruptions": {"enabled": False}
         }
     )
     agent.session_ref = session
@@ -78,21 +82,28 @@ async def entrypoint(ctx: JobContext):
         agent.is_ai_speaking = False
         agent.last_speech_time = datetime.now()
 
-    @session.on("agent_speech_committed")
-    def _on_agent_speech_committed(msg):
-        # Extract the text safely regardless of the specific LiveKit SDK version
-        valerie_text = getattr(msg, "text", "") or getattr(msg, "content", "")
-        
+    @session.on("conversation_item_added")
+    def _on_conversation_item_added(event):
+        item = event.item
+        if getattr(item, "role", None) != "assistant":
+            return
+
+        # In livekit-agents 1.x, ChatMessage exposes .text_content (and .content as a list)
+        valerie_text = getattr(item, "text_content", "") or ""
+        if not valerie_text and isinstance(getattr(item, "content", None), list):
+            valerie_text = " ".join(c for c in item.content if isinstance(c, str))
+
+        valerie_text = valerie_text.strip()
         if valerie_text:
             reason = agent.current_trigger_reason
             agent.transcript_history.append({
                 "timestamp": datetime.now().isoformat(),
                 "raw": f"[Valerie ({reason})] {valerie_text}",
-                "clean": valerie_text
+                "clean": valerie_text,
             })
             logger.info(f"Logged Valerie's exact speech: '{valerie_text}'")
-            agent.current_trigger_reason = "Direct Interaction" # Reset trigger reason after logging
-
+            agent.current_trigger_reason = "Direct Interaction"  # Reset trigger reason after logging
+    
     # Data Logging Callback
     async def save_session_artifacts(reason: str):
         logger.info(f"Concluding session for {ctx.room.name} ({reason}). Exporting study logs...")

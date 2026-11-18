@@ -7,7 +7,6 @@ import urllib.parse
 import socket
 import subprocess
 import time
-from dotenv import load_dotenv
 from pathlib import Path
 
 # Set up logging
@@ -39,6 +38,7 @@ class Etherpad:
             ValueError: If ``ETHERPAD_API_KEY`` is not set.
         """
         self.pad_id = pad_id
+        self.prompt = prompt
         self.etherpad_dir = Path.home() / "etherpad-lite"
 
         api_key = os.getenv("ETHERPAD_API_KEY")

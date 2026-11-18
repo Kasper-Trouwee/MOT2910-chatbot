@@ -26,7 +26,10 @@ class Valerie(Agent):
         self.is_ai_speaking = False
         self.last_valerie_speech_time = datetime.now() # last time Valerie spoke, to avoid overlapping interventions
         self.current_trigger_reason = "Direct Interaction" # Reason Valerie is speaking, for logging purposes
-        super().__init__(instructions=system_prompt)
+        super().__init__(
+            instructions=system_prompt,
+            allow_interruptions=False,
+        )
 
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
@@ -81,7 +84,7 @@ class Valerie(Agent):
                     self.current_trigger_reason = "Silence Watchdog"
                     
                     # 3. Generate reply and wait for completion
-                    await self.session_ref.generate_reply(instructions=prompt)
+                    await self.session_ref.generate_reply(instructions=prompt, allow_interruptions=False)
                     
                 except Exception as e:
                     logger.error(f"Error in Silence Watchdog check: {e}")
@@ -133,7 +136,7 @@ class Valerie(Agent):
                     self.current_trigger_reason = "Semantic Watchdog"
                     
                     # 3. Generate reply and wait for completion
-                    await self.session_ref.generate_reply(instructions=intervention_prompt)
+                    await self.session_ref.generate_reply(instructions=intervention_prompt, allow_interruptions=False)
                     
                     # 4. Release lock and reset timer
                     self.is_ai_speaking = False
@@ -165,7 +168,7 @@ class Valerie(Agent):
                     
                     self.current_trigger_reason = "Presence Watchdog"
                     
-                    await self.session_ref.generate_reply(instructions=prompt)
+                    await self.session_ref.generate_reply(instructions=prompt, allow_interruptions=False)
                     
                 except Exception as e:
                     logger.error(f"Error in Presence Watchdog check: {e}")
