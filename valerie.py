@@ -34,6 +34,7 @@ class Valerie(Agent):
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         self.last_speech_time = datetime.now()
+        self.last_valerie_speech_time = datetime.now()
 
         raw_text = getattr(new_message, "text", "") or getattr(new_message, "text_content", "")
         if not raw_text:

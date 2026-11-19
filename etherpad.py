@@ -1,6 +1,7 @@
 from py_etherpad import EtherpadLiteClient
 import asyncio
 import os
+import signal
 import logging
 import webbrowser
 import urllib.parse
@@ -49,11 +50,10 @@ class Etherpad:
         self.client = EtherpadLiteClient(api_key, url + '/api')
         self.cached_text = "(Shared canvas currently empty)"
 
+        self.process = None
         running = self.is_etherpad_running()
         if not running:
             self.start_etherpad()
-
-        asyncio.create_task(self.create_pad_if_missing())
 
     def is_etherpad_running(self) -> bool:
             """Check if the Etherpad server is listening on the host/port from self.url."""
@@ -65,7 +65,7 @@ class Etherpad:
                 sock.settimeout(1.0)
                 return sock.connect_ex((host, port)) == 0
 
-    def start_etherpad(self):
+    def start_etherpad(self, timeout=30):
         """Open the Etherpad in the default web browser."""
         if not self.is_etherpad_running():
             logger.info("Etherpad server is not running. Starting it now...")
@@ -75,16 +75,16 @@ class Etherpad:
                 logger.error(f"Could not find startup script at {run_script}")
                 return
 
-            subprocess.Popen(
+            self.process = subprocess.Popen(
                 ["bash", str(run_script)],
                 cwd=str(self.etherpad_dir),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                start_new_session=True,  # Keeps Etherpad running if your Python app exits
+                start_new_session=True,
             )
 
             # Wait up to 15 seconds for the server to boot
-            for _ in range(15):
+            for _ in range(timeout):
                 time.sleep(1)
                 if self.is_etherpad_running():
                     logger.info(f"Etherpad server started at {self.url}")
@@ -94,6 +94,65 @@ class Etherpad:
                     f"Timed out waiting for Etherpad server to start at {self.url}."
                 )
                 return
+    async def initialize(self):
+        """Ensure server is running, create the pad with initial prompt, and open browser."""
+        if not self.is_etherpad_running():
+            await asyncio.to_thread(self.start_etherpad)
+        await self.create_pad_if_missing()
+    
+    def stop_etherpad(self, timeout:int = 3):
+        """Stop the local Etherpad server process."""
+        if not self.is_etherpad_running():
+            logger.info("Etherpad server is already stopped.")
+            return
+
+        logger.info("Stopping Etherpad server...")
+
+        # 1. If this instance started the process, kill its entire process group
+        if self.process and self.process.poll() is None:
+            try:
+                os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                self.process.wait(timeout=timeout)
+                self.process = None
+                logger.info("Etherpad server stopped cleanly.")
+                return
+            except Exception as e:
+                logger.warning(f"Failed to stop process group cleanly: {e}")
+
+        # 2. Fallback: Find whatever process is listening on the Etherpad port (Linux/macOS)
+        parsed = urllib.parse.urlparse(self.url)
+        port = parsed.port or 9001
+
+        try:
+            # Find PIDs listening on the port
+            result = subprocess.run(
+                ["lsof", "-t", f"-i:{port}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            pids = result.stdout.strip().splitlines()
+
+            for pid_str in pids:
+                pid = int(pid_str)
+                os.kill(pid, signal.SIGTERM)
+
+            # Wait up to 10 seconds for the port to close
+            for _ in range(10):
+                time.sleep(1)
+                if not self.is_etherpad_running():
+                    logger.info("Etherpad server stopped.")
+                    return
+
+            # Force kill if it didn't shut down gracefully
+            for pid_str in pids:
+                os.kill(int(pid_str), signal.SIGKILL)
+            logger.info("Etherpad server force-stopped.")
+
+        except FileNotFoundError:
+            logger.error("'lsof' command not found; cannot locate Etherpad PID automatically.")
+        except Exception as e:
+            logger.error(f"Error stopping Etherpad: {e}")
 
     async def get_latest_text(self) -> str:
         """Fetch and return the latest pad text, retaining the cache on errors."""
